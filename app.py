@@ -1,27 +1,23 @@
-# app.py
+import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, abort
 import sqlite3
 import datetime as dt
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 import logging
 from jinja2 import TemplateNotFound
 
-# --- Caminhos absolutos para evitar problemas com --chdir no Render ---
+# Caminhos absolutos com base no próprio arquivo
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, static_folder=STATIC_DIR, template_folder=TEMPLATES_DIR)
 app.config.from_object('config')
-
-# Definir secret key já (Flask lê de app.secret_key ou app.config['SECRET_KEY'])
 app.secret_key = app.config.get("SECRET_KEY")
 
-# Log básico
 logging.basicConfig(level=logging.INFO)
+print("TEMPLATES_DIR ->", TEMPLATES_DIR)  # aparece nos logs do Render
 logger = logging.getLogger(__name__)
-
 # --- Garantir pasta do banco e inicializar mesmo sob Gunicorn/Render ---
 db_path = app.config.get("DATABASE")
 db_dir = os.path.dirname(db_path) if db_path else ""
