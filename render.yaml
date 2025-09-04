@@ -2,18 +2,23 @@
 services:
   - type: web
     name: vibra
-    env: python
+    runtime: python
     plan: free
+
+    # O código está em vibra_site/, então:
     buildCommand: pip install -r vibra_site/requirements.txt
     startCommand: gunicorn --chdir vibra_site app:app --bind 0.0.0.0:10000 --workers 2 --threads 4
-    runtime:
-      pythonVersion: 3.11.9
+
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE
-        # Banco ficará no disco persistente montado e dentro de vibra_site/
         value: /opt/render/project/src/vibra_site/data/vibra.db
+      # Versão do Python via variável de ambiente (suportado pelo Render)
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+    # Disco persistente para o SQLite
     disk:
       name: vibra-data
       mountPath: /opt/render/project/src/vibra_site/data
