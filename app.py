@@ -1,10 +1,20 @@
-
+# app.py
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, abort
-import sqlite3, datetime as dt
+import sqlite3
+import datetime as dt
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
+# Cria app apontando para as pastas locais de templates/ e static/
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config.from_object('config')
+
+# --- Garantir pasta do banco e inicializar mesmo sob Gunicorn/Render ---
+# Se DATABASE apontar para um caminho com diretório, cria o diretório.
+db_path = app.config.get("DATABASE")
+db_dir = os.path.dirname(db_path) if db_path else ""
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
 
 def get_db():
     if 'db' not in g:
@@ -56,13 +66,24 @@ def init_db():
     # Seed sample post
     cur = db.execute("SELECT COUNT(*) c FROM posts")
     if cur.fetchone()["c"] == 0:
-        db.execute("INSERT INTO posts (user_id, content, created_at) VALUES ((SELECT id FROM users WHERE email='admin@vibra.com'), ?, ?)",
-                   ("Bem-vindo(a) à VIBRA! Este é um post de teste.", dt.datetime.utcnow().isoformat()))
+        db.execute(
+            "INSERT INTO posts (user_id, content, created_at) VALUES ((SELECT id FROM users WHERE email='admin@vibra.com'), ?, ?)",
+            ("Bem-vindo(a) à VIBRA! Este é um post de teste.", dt.datetime.utcnow().isoformat())
+        )
         db.commit()
+
+# Inicializa o DB ao importar o app (funciona com gunicorn no Render)
+with app.app_context():
+    try:
+        init_db()
+    except Exception as e:
+        # Log no stdout para aparecer nos logs do Render
+        print("Falha ao inicializar DB:", e)
 
 def current_user():
     uid = session.get("user_id")
-    if not uid: return None
+    if not uid:
+        return None
     db = get_db()
     return db.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
 
@@ -117,13 +138,18 @@ def feed():
     if request.method == "POST":
         content = request.form.get("content","").strip()
         if content:
-            db.execute("INSERT INTO posts (user_id, content, created_at) VALUES (?, ?, ?)", (user["id"], content, dt.datetime.utcnow().isoformat()))
+            db.execute(
+                "INSERT INTO posts (user_id, content, created_at) VALUES (?, ?, ?)",
+                (user["id"], content, dt.datetime.utcnow().isoformat())
+            )
             db.commit()
             flash("Publicado!", "success")
         else:
             flash("Escreva algo para publicar.", "warning")
         return redirect(url_for("feed"))
-    posts = db.execute("SELECT p.*, u.name AS author FROM posts p JOIN users u ON u.id=p.user_id ORDER BY p.created_at DESC").fetchall()
+    posts = db.execute(
+        "SELECT p.*, u.name AS author FROM posts p JOIN users u ON u.id=p.user_id ORDER BY p.created_at DESC"
+    ).fetchall()
     return render_template("feed.html", user=user, posts=posts)
 
 @app.route("/admin")
@@ -147,8 +173,10 @@ def admin_users():
         is_admin = 1 if request.form.get("is_admin") == "on" else 0
         if name and email and len(password) >= 6:
             try:
-                db.execute("INSERT INTO users (name, email, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?, ?)",
-                           (name, email, generate_password_hash(password), is_admin, dt.datetime.utcnow().isoformat()))
+                db.execute(
+                    "INSERT INTO users (name, email, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (name, email, generate_password_hash(password), is_admin, dt.datetime.utcnow().isoformat())
+                )
                 db.commit()
                 flash("Usuário criado.", "success")
             except sqlite3.IntegrityError:
@@ -156,15 +184,16 @@ def admin_users():
         else:
             flash("Preencha todos os campos (senha 6+).", "warning")
         return redirect(url_for("admin_users"))
-    users = db.execute("SELECT id, name, email, is_admin, created_at FROM users ORDER BY id").fetchall()
+    users = db.execute(
+        "SELECT id, name, email, is_admin, created_at FROM users ORDER BY id"
+    ).fetchall()
     return render_template("admin_users.html", users=users, user=current_user())
 
 @app.errorhandler(403)
 def forbidden(e):
     return render_template("base.html", content="Acesso negado.", title="403"), 403
 
+# Execução local (não é usado no Render, mas mantém para testes locais)
 if __name__ == "__main__":
-    with app.app_context():
-        init_db()
     app.secret_key = app.config["SECRET_KEY"]
     app.run(debug=True, host="0.0.0.0", port=5000)
