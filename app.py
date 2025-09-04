@@ -4,13 +4,25 @@ import sqlite3
 import datetime as dt
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import logging
+from jinja2 import TemplateNotFound
 
-# Cria app apontando para as pastas locais de templates/ e static/
-app = Flask(__name__, static_folder='static', template_folder='templates')
+# --- Caminhos absolutos para evitar problemas com --chdir no Render ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+app = Flask(__name__, static_folder=STATIC_DIR, template_folder=TEMPLATES_DIR)
 app.config.from_object('config')
 
+# Definir secret key já (Flask lê de app.secret_key ou app.config['SECRET_KEY'])
+app.secret_key = app.config.get("SECRET_KEY")
+
+# Log básico
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # --- Garantir pasta do banco e inicializar mesmo sob Gunicorn/Render ---
-# Se DATABASE apontar para um caminho com diretório, cria o diretório.
 db_path = app.config.get("DATABASE")
 db_dir = os.path.dirname(db_path) if db_path else ""
 if db_dir:
@@ -18,6 +30,7 @@ if db_dir:
 
 def get_db():
     if 'db' not in g:
+        # check_same_thread=False se você quiser acessar em threads diferentes
         g.db = sqlite3.connect(app.config['DATABASE'])
         g.db.row_factory = sqlite3.Row
     return g.db
@@ -76,9 +89,9 @@ def init_db():
 with app.app_context():
     try:
         init_db()
+        logger.info("Banco inicializado com sucesso.")
     except Exception as e:
-        # Log no stdout para aparecer nos logs do Render
-        print("Falha ao inicializar DB:", e)
+        logger.exception("Falha ao inicializar DB: %s", e)
 
 def current_user():
     uid = session.get("user_id")
@@ -122,7 +135,11 @@ def login():
             flash("Login realizado!", "success")
             return redirect(request.args.get("next") or url_for("feed"))
         flash("Credenciais inválidas.", "danger")
-    return render_template("login.html")
+    try:
+        return render_template("login.html")
+    except TemplateNotFound:
+        logger.error("Template 'login.html' não encontrado em %s", TEMPLATES_DIR)
+        return "Template 'login.html' não encontrado. Verifique se o arquivo existe em vibra_site/templates/login.html", 500
 
 @app.route("/logout")
 def logout():
@@ -150,7 +167,11 @@ def feed():
     posts = db.execute(
         "SELECT p.*, u.name AS author FROM posts p JOIN users u ON u.id=p.user_id ORDER BY p.created_at DESC"
     ).fetchall()
-    return render_template("feed.html", user=user, posts=posts)
+    try:
+        return render_template("feed.html", user=user, posts=posts)
+    except TemplateNotFound:
+        logger.error("Template 'feed.html' não encontrado em %s", TEMPLATES_DIR)
+        return "Template 'feed.html' não encontrado.", 500
 
 @app.route("/admin")
 @admin_required
@@ -160,7 +181,11 @@ def admin():
         "users": db.execute("SELECT COUNT(*) c FROM users").fetchone()["c"],
         "posts": db.execute("SELECT COUNT(*) c FROM posts").fetchone()["c"]
     }
-    return render_template("admin.html", user=current_user(), stats=stats)
+    try:
+        return render_template("admin.html", user=current_user(), stats=stats)
+    except TemplateNotFound:
+        logger.error("Template 'admin.html' não encontrado em %s", TEMPLATES_DIR)
+        return "Template 'admin.html' não encontrado.", 500
 
 @app.route("/admin/users", methods=["GET","POST"])
 @admin_required
@@ -187,13 +212,20 @@ def admin_users():
     users = db.execute(
         "SELECT id, name, email, is_admin, created_at FROM users ORDER BY id"
     ).fetchall()
-    return render_template("admin_users.html", users=users, user=current_user())
+    try:
+        return render_template("admin_users.html", users=users, user=current_user())
+    except TemplateNotFound:
+        logger.error("Template 'admin_users.html' não encontrado em %s", TEMPLATES_DIR)
+        return "Template 'admin_users.html' não encontrado.", 500
 
 @app.errorhandler(403)
 def forbidden(e):
-    return render_template("base.html", content="Acesso negado.", title="403"), 403
+    # Usa base.html se existir; senão, texto simples
+    try:
+        return render_template("base.html", content="Acesso negado.", title="403"), 403
+    except TemplateNotFound:
+        return "Acesso negado (403).", 403
 
-# Execução local (não é usado no Render, mas mantém para testes locais)
+# Execução local
 if __name__ == "__main__":
-    app.secret_key = app.config["SECRET_KEY"]
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
