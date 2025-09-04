@@ -2,7 +2,7 @@ services:
   - type: web
     name: vibra
     runtime: python
-    buildCommand: pip install -r vibra_site/requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --chdir vibra_site app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4
     envVars:
       - key: SECRET_KEY
