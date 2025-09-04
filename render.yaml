@@ -14,3 +14,4 @@ services:
         value: /opt/render/project/src/vibra_site/vibra.db
       - key: PYTHON_VERSION
         value: 3.11.9
+
