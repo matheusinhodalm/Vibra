@@ -1,4 +1,3 @@
-# Render.com blueprint for VIBRA (Flask + SQLite) - app dentro de vibra_site/
 services:
   - type: web
     name: vibra
@@ -6,13 +5,12 @@ services:
     plan: free
 
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --chdir vibra_site app:app --bind 0.0.0.0:10000 --workers 2 --threads 4
+    startCommand: gunicorn app:app --bind 0.0.0.0:10000 --workers 2 --threads 4
 
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE
-        # Sem disco, o SQLite vai ficar no sistema de arquivos efêmero (serve para testes)
-        value: /opt/render/project/src/vibra_site/vibra.db
+        value: /opt/render/project/src/vibra.db
       - key: PYTHON_VERSION
         value: 3.11.9
