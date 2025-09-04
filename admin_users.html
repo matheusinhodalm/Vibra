@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="admin-users">
+  <h1>Usuários</h1>
+  <form class="user-form" method="post">
+    <input name="name" placeholder="Nome" required>
+    <input name="email" type="email" placeholder="E-mail" required>
+    <input name="password" type="password" placeholder="Senha (6+)" minlength="6" required>
+    <label class="check"><input type="checkbox" name="is_admin"> Admin</label>
+    <button class="cta">Criar</button>
+  </form>
+  <table class="user-table">
+    <thead><tr><th>ID</th><th>Nome</th><th>E-mail</th><th>Admin</th><th>Criado em</th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u['id'] }}</td>
+        <td>{{ u['name'] }}</td>
+        <td>{{ u['email'] }}</td>
+        <td>{{ 'Sim' if u['is_admin'] else 'Não' }}</td>
+        <td>{{ u['created_at'] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

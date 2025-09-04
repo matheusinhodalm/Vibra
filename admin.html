@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="admin">
+  <h1>Painel Admin</h1>
+  <div class="cards">
+    <div class="card"><h3>Usuários</h3><p>{{ stats['users'] }}</p></div>
+    <div class="card"><h3>Posts</h3><p>{{ stats['posts'] }}</p></div>
+  </div>
+  <p><a class="link" href="{{ url_for('admin_users') }}">Gerenciar usuários →</a></p>
+</section>
+{% endblock %}

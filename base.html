@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or 'VIBRA' }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="{{ url_for('feed') }}">VIBRA</a>
+      <nav class="nav">
+        {% if user %}
+          <span class="welcome">Olá, {{ user['name'] }}{% if user['is_admin'] %} (admin){% endif %}</span>
+          <a href="{{ url_for('feed') }}">Feed</a>
+          {% if user['is_admin'] %}<a href="{{ url_for('admin') }}">Admin</a>{% endif %}
+          <a class="logout" href="{{ url_for('logout') }}">Sair</a>
+        {% else %}
+          <a href="{{ url_for('login') }}">Entrar</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="page wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="flash {{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% if content %}{{ content|safe }}{% endif %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="wrap"><small>&copy; 2025 VIBRA</small></div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="feed">
+  <aside class="composer">
+    <form method="post">
+      <textarea name="content" rows="3" placeholder="O que está vibrando?"></textarea>
+      <div class="actions"><button class="cta">Publicar</button></div>
+    </form>
+  </aside>
+  <ul class="posts">
+    {% for p in posts %}
+    <li class="post">
+      <div class="meta"><strong>{{ p['author'] }}</strong> • <time>{{ p['created_at'] }}</time></div>
+      <div class="content">{{ p['content'] }}</div>
+    </li>
+    {% endfor %}
+    {% if not posts %}<li class="empty">Sem posts ainda.</li>{% endif %}
+  </ul>
+</section>
+{% endblock %}

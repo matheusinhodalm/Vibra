@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="auth">
+  <form class="auth-card" method="post">
+    <h1>Entrar</h1>
+    <label>E-mail
+      <input type="email" name="email" placeholder="admin@vibra.com" required>
+    </label>
+    <label>Senha
+      <input type="password" name="password" placeholder="••••••••" required minlength="6">
+    </label>
+    <button class="cta">Entrar</button>
+    <p class="hint">Admin: <b>admin@vibra.com</b> / <b>vibra123</b></p>
+  </form>
+</section>
+{% endblock %}
